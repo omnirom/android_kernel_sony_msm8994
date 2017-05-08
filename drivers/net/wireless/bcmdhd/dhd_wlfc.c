@@ -1,14 +1,14 @@
 /*
  * DHD PROP_TXSTATUS Module.
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
- *
+ * Copyright (C) 1999-2017, Broadcom Corporation
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,12 +16,12 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- *
+ * 
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_wlfc.c 490028 2014-07-09 05:58:25Z $
+ * $Id: dhd_wlfc.c 507166 2014-10-08 19:50:42Z $
  *
  */
 
@@ -92,8 +92,7 @@ _dhd_wlfc_prec_enque(struct pktq *pq, int prec, void* p, bool qHead,
 
 
 	ASSERT(prec >= 0 && prec < pq->num_prec);
-	/* queueing chains not allowed */
-	ASSERT(!((PKTLINK(p) != NULL) && (PKTLINK(p) != p)));
+	ASSERT(PKTLINK(p) == NULL);         /* queueing chains not allowed */
 
 	ASSERT(!pktq_full(pq));
 	ASSERT(!pktq_pfull(pq, prec));
@@ -457,7 +456,7 @@ _dhd_wlfc_deque_afq(athost_wl_status_info_t* ctx, uint16 hslot, uint8 hcnt, uint
 }
 
 static int
-_dhd_wlfc_pushheader(athost_wl_status_info_t* ctx, void* p, bool tim_signal,
+_dhd_wlfc_pushheader(athost_wl_status_info_t* ctx, void** packet, bool tim_signal,
 	uint8 tim_bmp, uint8 mac_handle, uint32 htodtag, uint16 htodseq, bool skip_wlfc_hdr)
 {
 	uint32 wl_pktinfo = 0;
@@ -468,6 +467,7 @@ _dhd_wlfc_pushheader(athost_wl_status_info_t* ctx, void* p, bool tim_signal,
 	dhd_pub_t *dhdp = (dhd_pub_t *)ctx->dhdp;
 
 	struct bdc_header *h;
+	void *p = *packet;
 
 	if (skip_wlfc_hdr)
 		goto push_bdc_hdr;
@@ -525,6 +525,7 @@ push_bdc_hdr:
 	h->flags2 = 0;
 	h->dataOffset = dataOffset >> 2;
 	BDC_SET_IF_IDX(h, DHD_PKTTAG_IF(PKTTAG(p)));
+	*packet = p;
 	return BCME_OK;
 }
 
@@ -572,8 +573,7 @@ _dhd_wlfc_find_table_entry(athost_wl_status_info_t* ctx, void* p)
 	 * STA/GC gets the Mac Entry for TDLS destinations, TDLS destinations
 	 * have their own entry.
 	 */
-	if ((iftype == WLC_E_IF_ROLE_STA || ETHER_ISMULTI(dstn) ||
-		iftype == WLC_E_IF_ROLE_P2P_CLIENT) &&
+	if ((DHD_IF_ROLE_STA(iftype) || ETHER_ISMULTI(dstn)) &&
 		(ctx->destination_entries.interfaces[ifid].occupied)) {
 			entry = &ctx->destination_entries.interfaces[ifid];
 	}
@@ -625,7 +625,7 @@ _dhd_wlfc_prec_drop(dhd_pub_t *dhdp, int prec, void* p, bool bPktInQ)
 		/* pkt in delayed q, so fake push BDC header for
 		 * dhd_tcpack_check_xmit() and dhd_txcomplete().
 		 */
-		_dhd_wlfc_pushheader(ctx, p, FALSE, 0, 0, 0, 0, TRUE);
+		_dhd_wlfc_pushheader(ctx, &p, FALSE, 0, 0, 0, 0, TRUE);
 
 		/* This packet is about to be freed, so remove it from tcp_ack_info_tbl
 		 * This must be one of...
@@ -890,7 +890,7 @@ _dhd_wlfc_send_signalonly_packet(athost_wl_status_info_t* ctx, wlfc_mac_descript
 	if (p) {
 		PKTPULL(ctx->osh, p, dummylen);
 		DHD_PKTTAG_SET_H2DTAG(PKTTAG(p), 0);
-		_dhd_wlfc_pushheader(ctx, p, TRUE, ta_bmp, entry->mac_handle, 0, 0, FALSE);
+		_dhd_wlfc_pushheader(ctx, &p, TRUE, ta_bmp, entry->mac_handle, 0, 0, FALSE);
 		DHD_PKTTAG_SETSIGNALONLY(PKTTAG(p), 1);
 		DHD_PKTTAG_WLFCPKT_SET(PKTTAG(p), 1);
 #ifdef PROP_TXSTATUS_DEBUG
@@ -987,7 +987,7 @@ _dhd_wlfc_enque_suppressed(athost_wl_status_info_t* ctx, int prec, void* p)
 
 static int
 _dhd_wlfc_pretx_pktprocess(athost_wl_status_info_t* ctx,
-	wlfc_mac_descriptor_t* entry, void* p, int header_needed, uint32* slot)
+	wlfc_mac_descriptor_t* entry, void** packet, int header_needed, uint32* slot)
 {
 	int rc = BCME_OK;
 	int hslot = WLFC_HANGER_MAXITEMS;
@@ -997,6 +997,7 @@ _dhd_wlfc_pretx_pktprocess(athost_wl_status_info_t* ctx,
 	uint8 free_ctr, flags = 0;
 	int gen = 0xff;
 	dhd_pub_t *dhdp = (dhd_pub_t *)ctx->dhdp;
+	void * p = *packet;
 
 	*slot = hslot;
 
@@ -1067,8 +1068,7 @@ _dhd_wlfc_pretx_pktprocess(athost_wl_status_info_t* ctx,
 	WL_TXSTATUS_SET_GENERATION(htod, gen);
 	DHD_PKTTAG_SETPKTDIR(PKTTAG(p), 1);
 
-
-	rc = _dhd_wlfc_pushheader(ctx, p, send_tim_update,
+	rc = _dhd_wlfc_pushheader(ctx, &p, send_tim_update,
 		entry->traffic_lastreported_bmp, entry->mac_handle, htod, htodseq, FALSE);
 	if (rc == BCME_OK) {
 		DHD_PKTTAG_SET_H2DTAG(PKTTAG(p), htod);
@@ -1097,6 +1097,7 @@ _dhd_wlfc_pretx_pktprocess(athost_wl_status_info_t* ctx,
 		}
 	}
 	*slot = hslot;
+	*packet = p;
 	return rc;
 }
 
@@ -1339,10 +1340,12 @@ _dhd_wlfc_hanger_free_pkt(athost_wl_status_info_t* wlfc, uint32 slot_id, uint8 p
 				wlfc_mac_descriptor_t *entry = _dhd_wlfc_find_table_entry(wlfc, p);
 
 				ASSERT(entry);
-				entry->transit_count--;
-				if (entry->suppressed &&
-					(--entry->suppr_transit_count == 0)) {
-					entry->suppressed = FALSE;
+				if (entry->transit_count)
+					entry->transit_count--;
+				if (entry->suppr_transit_count) {
+					entry->suppr_transit_count--;
+					if (!entry->suppr_transit_count)
+						entry->suppressed = FALSE;
 				}
 				_dhd_wlfc_return_implied_credit(wlfc, p);
 				wlfc->stats.cleanup_fw_cnt++;
@@ -1359,7 +1362,9 @@ _dhd_wlfc_hanger_free_pkt(athost_wl_status_info_t* wlfc, uint32 slot_id, uint8 p
 	} else {
 		if (item->pkt_state & WLFC_HANGER_PKT_STATE_TXSTATUS) {
 			/* free slot */
-			ASSERT(item->state != WLFC_HANGER_ITEM_STATE_FREE);
+			if (item->state == WLFC_HANGER_ITEM_STATE_FREE)
+				DHD_ERROR(("Error: %s():%d get multi TXSTATUS for one packet???\n",
+				    __FUNCTION__, __LINE__));
 			item->state = WLFC_HANGER_ITEM_STATE_FREE;
 		}
 	}
@@ -1406,7 +1411,7 @@ _dhd_wlfc_pktq_flush(athost_wl_status_info_t* ctx, struct pktq *pq,
 						/* pkt in delayed q, so fake push BDC header for
 						 * dhd_tcpack_check_xmit() and dhd_txcomplete().
 						 */
-						_dhd_wlfc_pushheader(ctx, p, FALSE, 0, 0,
+						_dhd_wlfc_pushheader(ctx, &p, FALSE, 0, 0,
 							0, 0, TRUE);
 #ifdef DHDTCPACK_SUPPRESS
 						if (dhd_tcpack_check_xmit(dhdp, p) == BCME_ERROR) {
@@ -1421,10 +1426,12 @@ _dhd_wlfc_pktq_flush(athost_wl_status_info_t* ctx, struct pktq *pq,
 				} else if (q_type == Q_TYPE_AFQ) {
 					wlfc_mac_descriptor_t* entry =
 						_dhd_wlfc_find_table_entry(ctx, p);
-					entry->transit_count--;
-					if (entry->suppressed &&
-						(--entry->suppr_transit_count == 0)) {
-						entry->suppressed = FALSE;
+					if (entry->transit_count)
+						entry->transit_count--;
+					if (entry->suppr_transit_count) {
+						entry->suppr_transit_count--;
+						if (!entry->suppr_transit_count)
+							entry->suppressed = FALSE;
 					}
 					_dhd_wlfc_return_implied_credit(ctx, p);
 					ctx->stats.cleanup_fw_cnt++;
@@ -1541,10 +1548,12 @@ _dhd_wlfc_cleanup_txq(dhd_pub_t *dhd, f_processpkt_t fn, void *arg)
 			DHD_ERROR(("%s: can't find pkt(%p) in hanger, free it anyway\n",
 				__FUNCTION__, pkt));
 		}
-		entry->transit_count--;
-		if (entry->suppressed &&
-			(--entry->suppr_transit_count == 0)) {
-			entry->suppressed = FALSE;
+		if (entry->transit_count)
+			entry->transit_count--;
+		if (entry->suppr_transit_count) {
+			entry->suppr_transit_count--;
+			if (!entry->suppr_transit_count)
+				entry->suppressed = FALSE;
 		}
 		_dhd_wlfc_return_implied_credit(wlfc, pkt);
 		wlfc->pkt_cnt_in_drv[DHD_PKTTAG_IF(PKTTAG(pkt))][DHD_PKTTAG_FIFO(PKTTAG(pkt))]--;
@@ -1646,6 +1655,12 @@ _dhd_wlfc_mac_entry_update(athost_wl_status_info_t* ctx, wlfc_mac_descriptor_t* 
 			memcpy(&entry->ea[0], ea, ETHER_ADDR_LEN);
 
 		if (action == eWLFC_MAC_ENTRY_ACTION_ADD) {
+			entry->suppressed = FALSE;
+			entry->transit_count = 0;
+			entry->suppr_transit_count = 0;
+		}
+
+		if (action == eWLFC_MAC_ENTRY_ACTION_ADD) {
 			dhd_pub_t *dhdp = (dhd_pub_t *)(ctx->dhdp);
 			pktq_init(&entry->psq, WLFC_PSQ_PREC_COUNT, WLFC_PSQ_LEN);
 			if (WLFC_GET_AFQ(dhdp->wlfc_mode)) {
@@ -1679,11 +1694,7 @@ _dhd_wlfc_mac_entry_update(athost_wl_status_info_t* ctx, wlfc_mac_descriptor_t* 
 		_dhd_wlfc_flow_control_check(ctx, &entry->psq, ifid);
 
 		entry->occupied = 0;
-		entry->suppressed = 0;
 		entry->state = WLFC_STATE_CLOSE;
-		entry->requested_credit = 0;
-		entry->transit_count = 0;
-		entry->suppr_transit_count = 0;
 		memset(&entry->ea[0], 0, ETHER_ADDR_LEN);
 
 		if (entry->next) {
@@ -1836,7 +1847,7 @@ _dhd_wlfc_handle_packet_commit(athost_wl_status_info_t* ctx, int ac,
 		credit count.
 	*/
 	DHD_PKTTAG_SETCREDITCHECK(PKTTAG(commit_info->p), commit_info->ac_fifo_credit_spent);
-	rc = _dhd_wlfc_pretx_pktprocess(ctx, commit_info->mac_entry, commit_info->p,
+	rc = _dhd_wlfc_pretx_pktprocess(ctx, commit_info->mac_entry, &commit_info->p,
 	     commit_info->needs_hdr, &hslot);
 
 	if (rc == BCME_OK) {
@@ -2077,9 +2088,12 @@ _dhd_wlfc_compressed_txstatus_update(dhd_pub_t *dhd, uint8* pkt_info, uint8 len,
 			}
 		}
 		/* pkt back from firmware side */
-		entry->transit_count--;
-		if (entry->suppressed && (--entry->suppr_transit_count == 0)) {
-			entry->suppressed = FALSE;
+		if (entry->transit_count)
+			entry->transit_count--;
+		if (entry->suppr_transit_count) {
+			entry->suppr_transit_count--;
+			if (!entry->suppr_transit_count)
+				entry->suppressed = FALSE;
 		}
 
 cont:
@@ -2515,10 +2529,8 @@ int dhd_wlfc_enable(dhd_pub_t *dhd)
 	}
 
 	/* allocate space to track txstatus propagated from firmware */
-#ifdef WLFC_STATE_PREALLOC
-	if (!dhd->wlfc_state)
-#endif
-	dhd->wlfc_state = MALLOC(dhd->osh, sizeof(athost_wl_status_info_t));
+	dhd->wlfc_state = DHD_OS_PREALLOC(dhd, DHD_PREALLOC_DHD_WLFC_INFO,
+		sizeof(athost_wl_status_info_t));
 	if (dhd->wlfc_state == NULL) {
 		rc = BCME_NOMEM;
 		goto exit;
@@ -2535,10 +2547,9 @@ int dhd_wlfc_enable(dhd_pub_t *dhd)
 	if (!WLFC_GET_AFQ(dhd->wlfc_mode)) {
 		wlfc->hanger = _dhd_wlfc_hanger_create(dhd->osh, WLFC_HANGER_MAXITEMS);
 		if (wlfc->hanger == NULL) {
-#ifndef WLFC_STATE_PREALLOC
-			MFREE(dhd->osh, dhd->wlfc_state, sizeof(athost_wl_status_info_t));
+			DHD_OS_PREFREE(dhd, dhd->wlfc_state,
+				sizeof(athost_wl_status_info_t));
 			dhd->wlfc_state = NULL;
-#endif
 			rc = BCME_NOMEM;
 			goto exit;
 		}
@@ -2795,7 +2806,7 @@ dhd_wlfc_commit_packets(dhd_pub_t *dhdp, f_commitpkt_t fcommit, void* commit_ctx
 		if (pktbuf) {
 			uint32 htod = 0;
 			WL_TXSTATUS_SET_FLAGS(htod, WLFC_PKTFLAG_PKTFROMHOST);
-			_dhd_wlfc_pushheader(ctx, pktbuf, FALSE, 0, 0, htod, 0, FALSE);
+			_dhd_wlfc_pushheader(ctx, &pktbuf, FALSE, 0, 0, htod, 0, FALSE);
 			if (fcommit(commit_ctx, pktbuf))
 				PKTFREE(ctx->osh, pktbuf, TRUE);
 			rc = BCME_OK;
@@ -3077,9 +3088,12 @@ dhd_wlfc_txcomplete(dhd_pub_t *dhd, void *txp, bool success)
 		/* return the credit, if necessary */
 		_dhd_wlfc_return_implied_credit(wlfc, txp);
 
-		entry->transit_count--;
-		if (entry->suppressed && (--entry->suppr_transit_count == 0)) {
-			entry->suppressed = FALSE;
+		if (entry->transit_count)
+			entry->transit_count--;
+		if (entry->suppr_transit_count) {
+			entry->suppr_transit_count--;
+			if (!entry->suppr_transit_count)
+				entry->suppressed = FALSE;
 		}
 		wlfc->pkt_cnt_in_drv[DHD_PKTTAG_IF(PKTTAG(txp))][DHD_PKTTAG_FIFO(PKTTAG(txp))]--;
 		wlfc->stats.pktout++;
@@ -3366,10 +3380,9 @@ dhd_wlfc_deinit(dhd_pub_t *dhd)
 
 
 	/* free top structure */
-#ifndef WLFC_STATE_PREALLOC
-	MFREE(dhd->osh, dhd->wlfc_state, sizeof(athost_wl_status_info_t));
+	DHD_OS_PREFREE(dhd, dhd->wlfc_state,
+		sizeof(athost_wl_status_info_t));
 	dhd->wlfc_state = NULL;
-#endif
 	dhd->proptxstatus_mode = hostreorder ?
 		WLFC_ONLY_AMPDU_HOSTREORDER : WLFC_FCMODE_NONE;
 

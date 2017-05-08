@@ -1,14 +1,14 @@
 /*
- * Linux cfg80211 driver
+ * Linux roam cache
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
- *
+ * Copyright (C) 1999-2017, Broadcom Corporation
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,12 +16,12 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- *
+ * 
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_roam.c 477711 2014-05-14 08:45:17Z $
+ * $Id: wl_roam.c 467328 2014-04-03 01:23:40Z $
  */
 
 
@@ -30,7 +30,9 @@
 #include <bcmwifi_channels.h>
 #include <wlioctl.h>
 #include <bcmutils.h>
+#ifdef WL_CFG80211
 #include <wl_cfg80211.h>
+#endif
 #include <wldev_common.h>
 
 #define MAX_ROAM_CACHE		100
@@ -43,7 +45,7 @@
 typedef struct {
 	chanspec_t chanspec;
 	int ssid_len;
-	char ssid[DOT11_MAX_SSID_LEN];
+	char ssid[MAX_SSID_BUFSIZE];
 } roam_channel_cache;
 
 typedef struct {
@@ -77,7 +79,6 @@ void init_roam(int ioctl_ver)
 
 	n_roam_cache = 0;
 	roam_band = WLC_BAND_AUTO;
-
 }
 
 
@@ -88,6 +89,7 @@ void set_roam_band(int band)
 
 void reset_roam_cache(void)
 {
+
 	n_roam_cache = 0;
 }
 
@@ -99,9 +101,6 @@ void add_roam_cache(wl_bss_info_t *bi)
 
 
 	if (n_roam_cache >= MAX_ROAM_CACHE)
-		return;
-
-	if (bi->SSID_len > DOT11_MAX_SSID_LEN)
 		return;
 
 	for (i = 0; i < n_roam_cache; i++) {
@@ -123,8 +122,7 @@ void add_roam_cache(wl_bss_info_t *bi)
 	n_roam_cache++;
 }
 
-static bool is_duplicated_channel(const chanspec_t *channels,
-							int n_channels, chanspec_t new)
+static bool is_duplicated_channel(const chanspec_t *channels, int n_channels, chanspec_t new)
 {
 	int i;
 
@@ -136,17 +134,18 @@ static bool is_duplicated_channel(const chanspec_t *channels,
 	return FALSE;
 }
 
-int get_roam_channel_list(int target_chan, chanspec_t *channels,
-						const wlc_ssid_t *ssid, int ioctl_ver)
+int get_roam_channel_list(int target_chan,
+	chanspec_t *channels, const wlc_ssid_t *ssid, int ioctl_ver)
 {
-	int i, n = 0;
+	int i, n = 1;
 	char chanbuf[CHANSPEC_STR_LEN];
-	if (target_chan) {
-		/* first index is filled with the given target channel */
-		channels[n++] = (target_chan & WL_CHANSPEC_CHAN_MASK) |
-			(target_chan <= CH_MAX_2G_CHANNEL ? band2G : band5G) | band_bw;
-		WL_DBG((" %s: %03d 0x%04X\n", __FUNCTION__, target_chan, channels[0]));
-	}
+
+	/* first index is filled with the given target channel */
+	channels[0] = (target_chan & WL_CHANSPEC_CHAN_MASK) |
+		(target_chan <= CH_MAX_2G_CHANNEL ? band2G : band5G) | band_bw;
+
+	WL_DBG((" %s: %03d 0x%04X\n", __FUNCTION__, target_chan, channels[0]));
+
 
 	for (i = 0; i < n_roam_cache; i++) {
 		chanspec_t ch = roam_cache[i].chanspec;
@@ -156,13 +155,12 @@ int get_roam_channel_list(int target_chan, chanspec_t *channels,
 			((roam_band == WLC_BAND_2G) && is_2G) ||
 			((roam_band == WLC_BAND_5G) && is_5G));
 
-		/* XXX: JIRA:SW4349-173 : 80p80 Support Required */
 		ch = CHSPEC_CHANNEL(ch) | (is_2G ? band2G : band5G) | band_bw;
 		if ((roam_cache[i].ssid_len == ssid->SSID_len) &&
 			band_match && !is_duplicated_channel(channels, n, ch) &&
 			(memcmp(roam_cache[i].ssid, ssid->SSID, ssid->SSID_len) == 0)) {
 			/* match found, add it */
-			WL_DBG(("%s: channel = %s\n", __FUNCTION__,
+			WL_DBG(("%s: Chanspec = %s\n", __FUNCTION__,
 				wf_chspec_ntoa_ex(ch, chanbuf)));
 			channels[n++] = ch;
 		}
@@ -212,6 +210,7 @@ void update_roam_cache(struct bcm_cfg80211 *cfg, int ioctl_ver)
 	struct net_device *dev = bcmcfg_to_prmry_ndev(cfg);
 	wlc_ssid_t ssid;
 
+
 	if (!wl_get_drv_status(cfg, CONNECTED, dev)) {
 		WL_DBG(("Not associated\n"));
 		return;
@@ -243,7 +242,6 @@ void update_roam_cache(struct bcm_cfg80211 *cfg, int ioctl_ver)
 		if ((roam_cache[i].ssid_len == ssid.SSID_len) &&
 			band_match && (memcmp(roam_cache[i].ssid, ssid.SSID, ssid.SSID_len) == 0)) {
 			/* match found, add it */
-			/* XXX: JIRA:SW4349-173 : 80p80 Support Required */
 			ch = CHSPEC_CHANNEL(ch) | (is_2G ? band2G : band5G) | band_bw;
 			add_roamcache_channel(&channel_list, ch);
 		}

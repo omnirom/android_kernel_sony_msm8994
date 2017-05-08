@@ -1,14 +1,14 @@
 /*
  * Broadcom Event  protocol definitions
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
- *
+ * Copyright (C) 1999-2017, Broadcom Corporation
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,14 +16,14 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- *
+ * 
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
  * Dependencies: proto/bcmeth.h
  *
- * $Id: bcmevent.h 474305 2014-04-30 20:54:29Z $
+ * $Id: bcmevent.h 642286 2016-06-08 05:57:20Z $
  *
  */
 
@@ -228,11 +228,18 @@ typedef BWL_PRE_PACKED_STRUCT struct bcm_event {
 #define WLC_E_PFN_SCAN_COMPLETE		138	/* PFN completed scan of network list */
 #define WLC_E_RMC_EVENT			139	/* RMC event */
 #define WLC_E_PFN_SSID_EXT      142  /* SSID EXT event */
-#define WLC_E_ROAM_EXP_EVENT    143  /* Expanded roam event */
-#define WLC_E_LAST			144	/* highest val + 1 for range checking */
+#define WLC_E_LAST			143	/* highest val + 1 for range checking */
+
+#if (WLC_E_LAST > 143)
+#error "WLC_E_LAST: Invalid value for last event; must be <= 140."
+#endif /* WLC_E_LAST */
 
 /* define an API for getting the string name of an event */
 extern const char *bcmevent_get_name(uint event_type);
+
+/* validate if the event is proper and if valid copy event header to event */
+extern int is_wlc_event_frame(void *pktdata, uint pktlen, uint16 exp_usr_subtype,
+	void *out_event);
 
 
 
@@ -251,6 +258,9 @@ extern const char *bcmevent_get_name(uint event_type);
 #define WLC_E_STATUS_11HQUIET		11	/* 802.11h quiet period started */
 #define WLC_E_STATUS_SUPPRESS		12	/* user disabled scanning (WLC_SET_SCANSUPPRESS) */
 #define WLC_E_STATUS_NOCHANS		13	/* no allowable channels to scan */
+#ifdef BCMCCX
+#define WLC_E_STATUS_CCXFASTRM		14	/* scan aborted due to CCX fast roam */
+#endif /* BCMCCX */
 #define WLC_E_STATUS_CS_ABORT		15	/* abort channel select */
 #define WLC_E_STATUS_ERROR		16	/* request failed due to error */
 #define WLC_E_STATUS_INVALID 0xff  /* Invalid status code to init variables. */
@@ -263,7 +273,6 @@ extern const char *bcmevent_get_name(uint event_type);
 #define WLC_E_REASON_DISASSOC		3	/* roamed due to DISASSOC indication */
 #define WLC_E_REASON_BCNS_LOST		4	/* roamed due to lost beacons */
 
-/* Roam codes used primarily by CCX */
 #define WLC_E_REASON_FAST_ROAM_FAILED	5	/* roamed due to fast roam failure */
 #define WLC_E_REASON_DIRECTED_ROAM	6	/* roamed due to request by AP */
 #define WLC_E_REASON_TSPEC_REJECTED	7	/* roamed due to TSPEC rejection */
@@ -285,11 +294,21 @@ extern const char *bcmevent_get_name(uint event_type);
 #define WLC_E_RSN_MISMATCH		8	/* STA does not support AP's RSN */
 #define WLC_E_PRUNE_NO_COMMON_RATES	9	/* No rates in common with AP */
 #define WLC_E_PRUNE_BASIC_RATES		10	/* STA does not support all basic rates of BSS */
+#ifdef BCMCCX
+#define WLC_E_PRUNE_CCXFAST_PREVAP	11	/* CCX FAST ROAM: prune previous AP */
+#endif /* def BCMCCX */
 #define WLC_E_PRUNE_CIPHER_NA		12	/* BSS's cipher not supported */
 #define WLC_E_PRUNE_KNOWN_STA		13	/* AP is already known to us as a STA */
+#ifdef BCMCCX
+#define WLC_E_PRUNE_CCXFAST_DROAM	14	/* CCX FAST ROAM: prune unqualified AP */
+#endif /* def BCMCCX */
 #define WLC_E_PRUNE_WDS_PEER		15	/* AP is already known to us as a WDS peer */
 #define WLC_E_PRUNE_QBSS_LOAD		16	/* QBSS LOAD - AAC is too low */
 #define WLC_E_PRUNE_HOME_AP		17	/* prune home AP */
+#ifdef BCMCCX
+#define WLC_E_PRUNE_AP_BLOCKED		18	/* prune blocked AP */
+#define WLC_E_PRUNE_NO_DIAG_SUPPORT	19	/* prune due to diagnostic mode not supported */
+#endif /* BCMCCX */
 
 /* WPA failure reason codes carried in the WLC_E_PSK_SUP event */
 #define WLC_E_SUP_OTHER			0	/* Other reason */
@@ -374,6 +393,21 @@ typedef struct wl_event_data_rssi {
 #define WLC_E_REASON_RMC_NONE		0
 #define WLC_E_REASON_RMC_AR_LOST		1
 #define WLC_E_REASON_RMC_AR_NO_ACK		2
+
+#ifdef WLTDLS
+/* TDLS Action Category code */
+#define TDLS_AF_CATEGORY		12
+/* Wi-Fi Display (WFD) Vendor Specific Category */
+/* used for WFD Tunneled Probe Request and Response */
+#define TDLS_VENDOR_SPECIFIC					127
+/* TDLS Action Field Values */
+#define TDLS_ACTION_SETUP_REQ					0
+#define TDLS_ACTION_SETUP_RESP					1
+#define TDLS_ACTION_SETUP_CONFIRM				2
+#define TDLS_ACTION_TEARDOWN					3
+#define WLAN_TDLS_SET_PROBE_WFD_IE		 11
+#define WLAN_TDLS_SET_SETUP_WFD_IE		 12
+#endif
 
 
 /* GAS event data */
@@ -483,7 +517,8 @@ enum nan_app_events {
 	WL_NAN_EVENT_STATUS_CHG = 9,  /* generated on any change in nan_mac status */
 	WL_NAN_EVENT_MERGE = 10,      /* Merged to a NAN cluster */
 	WL_NAN_EVENT_STOP = 11,       /* NAN stopped */
-	WL_NAN_EVENT_INVALID = 12,	/* delimiter for max value */
+	WL_NAN_EVENT_P2P = 12,       /* NAN P2P EVENT */
+	WL_NAN_EVENT_INVALID = 13,	/* delimiter for max value */
 };
 #define IS_NAN_EVT_ON(var, evt) ((var & (1 << (evt-1))) != 0)
 /*  ******************* end of NAN section *************** */

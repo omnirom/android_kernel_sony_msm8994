@@ -4,7 +4,7 @@
  * Provides type definitions and function prototypes used to link the
  * DHD OS, bus, and protocol modules.
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_proto.h 472193 2014-04-23 06:27:38Z $
+ * $Id: dhd_proto.h 574949 2015-07-28 13:02:30Z $
  */
 
 #ifndef _dhd_proto_h_
@@ -38,17 +38,18 @@
 
 #define DEFAULT_IOCTL_RESP_TIMEOUT	2000
 #ifndef IOCTL_RESP_TIMEOUT
-#ifdef BCMQT
-#define IOCTL_RESP_TIMEOUT  30000 /* In milli second */
-#else
 /* In milli second default value for Production FW */
 #define IOCTL_RESP_TIMEOUT  DEFAULT_IOCTL_RESP_TIMEOUT
-#endif /* BCMQT */
 #endif /* IOCTL_RESP_TIMEOUT */
 
 #ifndef MFG_IOCTL_RESP_TIMEOUT
 #define MFG_IOCTL_RESP_TIMEOUT  20000  /* In milli second default value for MFG FW */
 #endif /* MFG_IOCTL_RESP_TIMEOUT */
+
+#define DEFAULT_D3_ACK_RESP_TIMEOUT	4000
+#ifndef D3_ACK_RESP_TIMEOUT
+#define D3_ACK_RESP_TIMEOUT	DEFAULT_D3_ACK_RESP_TIMEOUT
+#endif /* D3_ACK_RESP_TIMEOUT */
 
 /*
  * Exported from the dhd protocol module (dhd_cdc, dhd_rndis)
@@ -107,8 +108,8 @@ extern int dhd_process_pkt_reorder_info(dhd_pub_t *dhd, uchar *reorder_info_buf,
 	uint reorder_info_len, void **pkt, uint32 *free_buf_count);
 
 #ifdef BCMPCIE
-extern int dhd_prot_process_msgbuf_txcpl(dhd_pub_t *dhd);
-extern int dhd_prot_process_msgbuf_rxcpl(dhd_pub_t *dhd);
+extern bool dhd_prot_process_msgbuf_txcpl(dhd_pub_t *dhd, uint bound);
+extern bool dhd_prot_process_msgbuf_rxcpl(dhd_pub_t *dhd, uint bound);
 extern int dhd_prot_process_ctrlbuf(dhd_pub_t * dhd);
 extern bool dhd_prot_dtohsplit(dhd_pub_t * dhd);
 extern int dhd_post_dummy_msg(dhd_pub_t *dhd);
@@ -132,7 +133,6 @@ extern void dhd_prot_update_txflowring(dhd_pub_t *dhdp, uint16 flow_id, void *ms
 extern void dhd_prot_txdata_write_flush(dhd_pub_t *dhd, uint16 flow_id, bool in_lock);
 extern uint32 dhd_prot_txp_threshold(dhd_pub_t *dhd, bool set, uint32 val);
 extern void dhd_prot_clear(dhd_pub_t *dhd);
-
 
 #endif /* BCMPCIE */
 

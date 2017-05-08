@@ -1,14 +1,14 @@
 /*
  * Header file of Broadcom Dongle Host Driver (DHD)
  * Prefered Network Offload code and Wi-Fi Location Service(WLS) code.
- * Copyright (C) 1999-2014, Broadcom Corporation
- *
+ * Copyright (C) 1999-2017, Broadcom Corporation
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,7 +16,7 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- *
+ * 
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
@@ -94,8 +94,7 @@
 #define GSCAN_LOST_AP_WINDOW_DEFAULT        4
 #define GSCAN_MIN_BSSID_TIMEOUT             90
 #define GSCAN_BATCH_GET_MAX_WAIT            500
-
-#define CHANNEL_BUCKET_EMPTY_INDEX                      0xFFFF
+#define CHANNEL_BUCKET_EMPTY_INDEX                      0xFF
 #define GSCAN_RETRY_THRESHOLD              3
 #define MAX_EPNO_SSID_NUM                   32
 
@@ -173,7 +172,7 @@ typedef enum dhd_pno_gscan_cmd_cfg {
 
 typedef enum dhd_pno_mode {
 	/* Wi-Fi Legacy PNO Mode */
-	DHD_PNO_NONE_MODE   = 0,
+	DHD_PNO_NONE_MODE = 0,
 	DHD_PNO_LEGACY_MODE = (1 << (0)),
 	/* Wi-Fi Android BATCH SCAN Mode */
 	DHD_PNO_BATCH_MODE = (1 << (1)),
@@ -185,7 +184,7 @@ typedef enum dhd_pno_mode {
 #else
 typedef enum dhd_pno_mode {
 	/* Wi-Fi Legacy PNO Mode */
-	DHD_PNO_NONE_MODE   = 0,
+	DHD_PNO_NONE_MODE = 0,
 	DHD_PNO_LEGACY_MODE = (1 << (0)),
 	/* Wi-Fi Android BATCH SCAN Mode */
 	DHD_PNO_BATCH_MODE = (1 << (1)),
@@ -327,17 +326,17 @@ struct dhd_pno_swc_evt_param {
 };
 
 typedef struct wifi_gscan_result {
-    uint64 ts;                           /* Time of discovery           */
-    char ssid[DOT11_MAX_SSID_LEN+1];     /* null terminated             */
-    struct ether_addr	macaddr;         /* BSSID                      */
-    uint32 channel;                      /* channel frequency in MHz    */
-    int32 rssi;                          /* in db                       */
-    uint64 rtt;                          /* in nanoseconds              */
-    uint64 rtt_sd;                       /* standard deviation in rtt   */
-    uint16 beacon_period;                /* units are Kusec             */
-    uint16 capability;		            /* Capability information       */
-    uint32 ie_length;		            /* byte length of Information Elements */
-    char  ie_data[1];					/* IE data to follow       */
+	uint64 ts;                           /* Time of discovery           */
+	char ssid[DOT11_MAX_SSID_LEN+1];     /* null terminated             */
+	struct ether_addr	macaddr;         /* BSSID                      */
+	uint32 channel;                      /* channel frequency in MHz    */
+	int32 rssi;                          /* in db                       */
+	uint64 rtt;                          /* in nanoseconds              */
+	uint64 rtt_sd;                       /* standard deviation in rtt   */
+	uint16 beacon_period;                /* units are Kusec             */
+	uint16 capability;		            /* Capability information       */
+	uint32 ie_length;		            /* byte length of Information Elements */
+	char  ie_data[1];					/* IE data to follow       */
 } wifi_gscan_result_t;
 
 typedef struct gscan_results_cache {
@@ -348,13 +347,6 @@ typedef struct gscan_results_cache {
 	uint8  tot_consumed;
 	wifi_gscan_result_t results[1];
 } gscan_results_cache_t;
-
-typedef struct {
-    int  id;                            /* identifier of this network block, report this in event */
-    char realm[256];                    /* null terminated UTF8 encoded realm, 0 if unspecified */
-    int64_t roamingConsortiumIds[16];   /* roaming consortium ids to match, 0s if unspecified */
-    uint8 plmn[3];                      /* mcc/mnc combination as per rules, 0s if unspecified */
-} wifi_passpoint_network;
 
 typedef struct dhd_pno_gscan_capabilities {
     int max_scan_cache_size;
@@ -517,8 +509,6 @@ extern void dhd_dev_gscan_hotlist_cache_cleanup(struct net_device *dev, hotlist_
 extern int dhd_dev_wait_batch_results_complete(struct net_device *dev);
 extern void * dhd_dev_process_epno_result(struct net_device *dev,
                         const void  *data, uint32 event, int *send_evt_bytes);
-extern void * dhd_dev_process_anqpo_result(struct net_device *dev,
-			const void  *data, uint32 event, int *send_evt_bytes);
 #endif /* GSCAN_SUPPORT */
 /* dhd pno fuctions */
 extern int dhd_pno_stop_for_ssid(dhd_pub_t *dhd);
@@ -565,8 +555,7 @@ extern void dhd_gscan_hotlist_cache_cleanup(dhd_pub_t *dhd, hotlist_type_t type)
 extern int dhd_wait_batch_results_complete(dhd_pub_t *dhd);
 extern void * dhd_pno_process_epno_result(dhd_pub_t *dhd, const void *data,
          uint32 event, int *size);
-extern void * dhd_pno_process_anqpo_result(dhd_pub_t *dhd, const void *data, uint32 event, int *size);
 #endif /* GSCAN_SUPPORT */
-#endif /* PNO_SUPPORT */
+#endif 
 
 #endif /* __DHD_PNO_H__ */

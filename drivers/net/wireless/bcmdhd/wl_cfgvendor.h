@@ -1,14 +1,14 @@
 /*
  * Linux cfg80211 Vendor Extension Code
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
- *
+ * Copyright (C) 1999-2017, Broadcom Corporation
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,18 +16,14 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- *
+ * 
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_cfgvendor.h 473890 2014-04-30 01:55:06Z $
+ * $Id: wl_cfgvendor.h 455257 2014-02-20 08:10:24Z $
  */
 
-/*
- * New vendor interface additon to nl80211/cfg80211 to allow vendors
- * to implement proprietary features over the cfg80211 stack.
- */
 
 #ifndef _wl_cfgvendor_h_
 #define _wl_cfgvendor_h_
@@ -35,23 +31,24 @@
 #define OUI_BRCM    0x001018
 #define OUI_GOOGLE  0x001A11
 #define BRCM_VENDOR_SUBCMD_PRIV_STR	1
-#define ATTRIBUTE_U32_LEN                  (NLA_HDRLEN  + 4)
-#define VENDOR_ID_OVERHEAD                 ATTRIBUTE_U32_LEN
-#define VENDOR_SUBCMD_OVERHEAD             ATTRIBUTE_U32_LEN
-#define VENDOR_DATA_OVERHEAD               (NLA_HDRLEN)
+#define ATTRIBUTE_U32_LEN				(NLA_HDRLEN  + 4)
+#define VENDOR_ID_OVERHEAD				ATTRIBUTE_U32_LEN
+#define VENDOR_SUBCMD_OVERHEAD			ATTRIBUTE_U32_LEN
+#define VENDOR_DATA_OVERHEAD			(NLA_HDRLEN)
 
-#define SCAN_RESULTS_COMPLETE_FLAG_LEN       ATTRIBUTE_U32_LEN
-#define SCAN_INDEX_HDR_LEN                   (NLA_HDRLEN)
-#define SCAN_ID_HDR_LEN                      ATTRIBUTE_U32_LEN
-#define SCAN_FLAGS_HDR_LEN                   ATTRIBUTE_U32_LEN
-#define GSCAN_NUM_RESULTS_HDR_LEN            ATTRIBUTE_U32_LEN
-#define GSCAN_RESULTS_HDR_LEN                (NLA_HDRLEN)
-#define GSCAN_BATCH_RESULT_HDR_LEN  (SCAN_INDEX_HDR_LEN + SCAN_ID_HDR_LEN + \
-									SCAN_FLAGS_HDR_LEN + \
-							        GSCAN_NUM_RESULTS_HDR_LEN + \
-									GSCAN_RESULTS_HDR_LEN)
+#define SCAN_RESULTS_COMPLETE_FLAG_LEN	ATTRIBUTE_U32_LEN
+#define SCAN_INDEX_HDR_LEN				(NLA_HDRLEN)
+#define SCAN_ID_HDR_LEN					ATTRIBUTE_U32_LEN
+#define SCAN_FLAGS_HDR_LEN				ATTRIBUTE_U32_LEN
+#define GSCAN_NUM_RESULTS_HDR_LEN		ATTRIBUTE_U32_LEN
+#define GSCAN_RESULTS_HDR_LEN			(NLA_HDRLEN)
+#define GSCAN_BATCH_RESULT_HDR_LEN	(SCAN_INDEX_HDR_LEN + \
+								SCAN_ID_HDR_LEN + \
+								SCAN_FLAGS_HDR_LEN + \
+								GSCAN_NUM_RESULTS_HDR_LEN + \
+								GSCAN_RESULTS_HDR_LEN)
 
-#define VENDOR_REPLY_OVERHEAD       (VENDOR_ID_OVERHEAD + \
+#define VENDOR_REPLY_OVERHEAD		(VENDOR_ID_OVERHEAD + \
 									VENDOR_SUBCMD_OVERHEAD + \
 									VENDOR_DATA_OVERHEAD)
 typedef enum {
@@ -66,6 +63,9 @@ typedef enum {
 	ANDROID_NL80211_SUBCMD_GSCAN_RANGE_START = 0x1000,
 	ANDROID_NL80211_SUBCMD_GSCAN_RANGE_END   = 0x10FF,
 
+	/* define all NearbyDiscovery related commands between 0x1100 and 0x11FF */
+	ANDROID_NL80211_SUBCMD_NBD_RANGE_START = 0x1100,
+	ANDROID_NL80211_SUBCMD_NBD_RANGE_END   = 0x11FF,
 
 	/* define all RTT related commands between 0x1100 and 0x11FF */
 	ANDROID_NL80211_SUBCMD_RTT_RANGE_START = 0x1100,
@@ -77,24 +77,14 @@ typedef enum {
 	ANDROID_NL80211_SUBCMD_TDLS_RANGE_START = 0x1300,
 	ANDROID_NL80211_SUBCMD_TDLS_RANGE_END	= 0x13FF,
 
-	ANDROID_NL80211_SUBCMD_DEBUG_RANGE_START = 0x1400,
-	ANDROID_NL80211_SUBCMD_DEBUG_RANGE_END	= 0x14FF,
-
-	/* define all NearbyDiscovery related commands between 0x1500 and 0x15FF */
-	ANDROID_NL80211_SUBCMD_NBD_RANGE_START = 0x1500,
-	ANDROID_NL80211_SUBCMD_NBD_RANGE_END   = 0x15FF,
-
 	/* define all wifi calling related commands between 0x1600 and 0x16FF */
 	ANDROID_NL80211_SUBCMD_WIFI_OFFLOAD_RANGE_START = 0x1600,
 	ANDROID_NL80211_SUBCMD_WIFI_OFFLOAD_RANGE_END   = 0x16FF,
 
 	/* This is reserved for future usage */
-
 } ANDROID_VENDOR_SUB_COMMAND;
 
-enum wl_vendor_subcmd {
-	BRCM_VENDOR_SCMD_UNSPEC,
-	BRCM_VENDOR_SCMD_PRIV_STR,
+enum andr_vendor_subcmd {
 	GSCAN_SUBCMD_GET_CAPABILITIES = ANDROID_NL80211_SUBCMD_GSCAN_RANGE_START,
 	GSCAN_SUBCMD_SET_CONFIG,
 	GSCAN_SUBCMD_SET_SCAN_CONFIG,
@@ -105,6 +95,7 @@ enum wl_vendor_subcmd {
 	GSCAN_SUBCMD_SET_SIGNIFICANT_CHANGE_CONFIG,
 	GSCAN_SUBCMD_ENABLE_FULL_SCAN_RESULTS,
 	GSCAN_SUBCMD_GET_CHANNEL_LIST,
+	/* ANDR_WIFI_XXX although not related to gscan are defined here */
 	ANDR_WIFI_SUBCMD_GET_FEATURE_SET,
 	ANDR_WIFI_SUBCMD_GET_FEATURE_SET_MATRIX,
 	ANDR_WIFI_RANDOM_MAC_OUI,
@@ -121,20 +112,15 @@ enum wl_vendor_subcmd {
 	RTT_SUBCMD_SET_CONFIG = ANDROID_NL80211_SUBCMD_RTT_RANGE_START,
 	RTT_SUBCMD_CANCEL_CONFIG,
 	RTT_SUBCMD_GETCAPABILITY,
+
 	LSTATS_SUBCMD_GET_INFO = ANDROID_NL80211_SUBCMD_LSTATS_RANGE_START,
-	DEBUG_START_LOGGING = ANDROID_NL80211_SUBCMD_DEBUG_RANGE_START,
-	DEBUG_TRIGGER_MEM_DUMP,
-	DEBUG_GET_MEM_DUMP,
-	DEBUG_GET_VER,
-	DEBUG_GET_RING_STATUS,
-	DEBUG_GET_RING_DATA,
-	DEBUG_GET_FEATURE,
-	DEBUG_RESET_LOGGING,
 	WIFI_OFFLOAD_SUBCMD_START_MKEEP_ALIVE = ANDROID_NL80211_SUBCMD_WIFI_OFFLOAD_RANGE_START,
 	WIFI_OFFLOAD_SUBCMD_STOP_MKEEP_ALIVE,
+
 	/* Add more sub commands here */
-    VENDOR_SUBCMD_MAX
+	VENDOR_SUBCMD_MAX
 };
+
 
 enum gscan_attributes {
     GSCAN_ATTRIBUTE_NUM_BUCKETS = 10,
@@ -188,7 +174,6 @@ enum gscan_attributes {
     GSCAN_ATTRIBUTE_MIN_BREACHING,
     GSCAN_ATTRIBUTE_SIGNIFICANT_CHANGE_BSSIDS,
     GSCAN_ATTRIBUTE_SIGNIFICANT_CHANGE_FLUSH,
-
     /* EPNO */
     GSCAN_ATTRIBUTE_EPNO_SSID_LIST = 70,
     GSCAN_ATTRIBUTE_EPNO_SSID,
@@ -267,36 +252,20 @@ enum rtt_attributes {
 	RTT_ATTRIBUTE_TARGET_TYPE,
 	RTT_ATTRIBUTE_TARGET_PEER,
 	RTT_ATTRIBUTE_TARGET_CHAN,
-	RTT_ATTRIBUTE_TARGET_PERIOD,
+	RTT_ATTRIBUTE_TARGET_INTERVAL,
 	RTT_ATTRIBUTE_TARGET_NUM_BURST,
 	RTT_ATTRIBUTE_TARGET_NUM_FTM_BURST,
 	RTT_ATTRIBUTE_TARGET_NUM_RETRY_FTM,
 	RTT_ATTRIBUTE_TARGET_NUM_RETRY_FTMR,
 	RTT_ATTRIBUTE_TARGET_LCI,
 	RTT_ATTRIBUTE_TARGET_LCR,
-	RTT_ATTRIBUTE_TARGET_BURST_DURATION,
+	RTT_ATTRIBUTE_TARGET_BURST_TIMEOUT,
 	RTT_ATTRIBUTE_TARGET_PREAMBLE,
 	RTT_ATTRIBUTE_TARGET_BW,
 	RTT_ATTRIBUTE_RESULTS_COMPLETE = 30,
 	RTT_ATTRIBUTE_RESULTS_PER_TARGET,
 	RTT_ATTRIBUTE_RESULT_CNT,
 	RTT_ATTRIBUTE_RESULT
-};
-
-enum debug_attributes {
-	DEBUG_ATTRIBUTE_GET_DRIVER,
-	DEBUG_ATTRIBUTE_GET_FW,
-	DEBUG_ATTRIBUTE_RING_ID,
-	DEBUG_ATTRIBUTE_RING_NAME,
-	DEBUG_ATTRIBUTE_RING_FLAGS,
-	DEBUG_ATTRIBUTE_LOG_LEVEL,
-	DEBUG_ATTRIBUTE_LOG_TIME_INTVAL,
-	DEBUG_ATTRIBUTE_LOG_MIN_DATA_SIZE,
-	DEBUG_ATTRIBUTE_FW_DUMP_LEN,
-	DEBUG_ATTRIBUTE_FW_DUMP_DATA,
-	DEBUG_ATTRIBUTE_RING_DATA,
-	DEBUG_ATTRIBUTE_RING_STATUS,
-	DEBUG_ATTRIBUTE_RING_NUM
 };
 
 enum mkeep_alive_attributes {
@@ -311,7 +280,7 @@ enum mkeep_alive_attributes {
 enum wifi_rssi_monitor_attr {
 	RSSI_MONITOR_ATTRIBUTE_MAX_RSSI,
 	RSSI_MONITOR_ATTRIBUTE_MIN_RSSI,
-	RSSI_MONITOR_ATTRIBUTE_START,
+	RSSI_MONITOR_ATTRIBUTE_START
 };
 
 typedef enum wl_vendor_event {
@@ -348,8 +317,9 @@ typedef enum wl_vendor_gscan_attribute {
 	ATTR_SET_SCAN_SIGNIFICANT_CFG_ID, /* set list of bssids, rssi threshold etc.. */
 	ATTR_SET_SCAN_CFG_ID, /* set common scan config params here */
 	ATTR_GET_GSCAN_CAPABILITIES_ID,
-    /* Add more sub commands here */
-    ATTR_GSCAN_MAX
+
+	/* Add more sub commands here */
+	ATTR_GSCAN_MAX
 } wl_vendor_gscan_attribute_t;
 
 typedef enum gscan_batch_attribute {
@@ -372,12 +342,12 @@ typedef enum gscan_complete_event {
 #define BRCM_VENDOR_SCMD_CAPA	"cap"
 
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(3, 13, 0)) || defined(WL_VENDOR_EXT_SUPPORT)
-extern int wl_cfgvendor_attach(struct wiphy *wiphy, dhd_pub_t *dhd);
+extern int wl_cfgvendor_attach(struct wiphy *wiphy);
 extern int wl_cfgvendor_detach(struct wiphy *wiphy);
 extern int wl_cfgvendor_send_async_event(struct wiphy *wiphy,
-                  struct net_device *dev, int event_id, const void  *data, int len);
+	struct net_device *dev, int event_id, const void  *data, int len);
 extern int wl_cfgvendor_send_hotlist_event(struct wiphy *wiphy,
-                struct net_device *dev, void  *data, int len, wl_vendor_event_t event);
+	struct net_device *dev, void  *data, int len, wl_vendor_event_t event);
 #endif /* (LINUX_VERSION_CODE > KERNEL_VERSION(3, 13, 0)) || defined(WL_VENDOR_EXT_SUPPORT) */
 
 #endif /* _wl_cfgvendor_h_ */

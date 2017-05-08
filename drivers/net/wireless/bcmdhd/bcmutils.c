@@ -1,14 +1,14 @@
 /*
  * Driver O/S-independent utility routines
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
- *
+ * Copyright (C) 1999-2017, Broadcom Corporation
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,11 +16,11 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- *
+ * 
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
- * $Id: bcmutils.c 473326 2014-04-29 00:37:35Z $
+ * $Id: bcmutils.c 617200 2016-02-04 12:23:42Z $
  */
 
 #include <bcm_cfg.h>
@@ -31,10 +31,6 @@
 
 #include <osl.h>
 #include <bcmutils.h>
-#if defined(BCMNVRAM)
-#include <siutils.h>
-#include <bcmnvram.h>
-#endif
 
 #else /* !BCMDRIVER */
 
@@ -741,7 +737,7 @@ prpkt(const char *msg, osl_t *osh, void *p0)
 	for (p = p0; p; p = PKTNEXT(osh, p))
 		prhex(NULL, PKTDATA(osh, p), PKTLEN(osh, p));
 }
-#endif
+#endif	
 
 /* Takes an Ethernet frame and sets out-of-bound PKTPRIO.
  * Also updates the inplace vlan tag if requested.
@@ -798,12 +794,6 @@ pktsetprio(void *pkt, bool update_vtag)
 			evh->vlan_tag = hton16(vlan_tag);
 			rc |= PKTPRIO_UPD;
 		}
-
-#ifdef EAPOL_PKT_PRIO
-	} else if (eh->ether_type == hton16(ETHER_TYPE_802_1X)) {
-		priority = PRIO_8021D_NC;
-		rc = PKTPRIO_DSCP;
-#endif /* EAPOL_PKT_PRIO */
 	} else if ((eh->ether_type == hton16(ETHER_TYPE_IP)) ||
 		(eh->ether_type == hton16(ETHER_TYPE_IPV6))) {
 		uint8 *ip_body = pktdata + sizeof(struct ether_header);
@@ -1382,7 +1372,9 @@ bcm_parse_tlvs(void *buf, int buflen, uint key)
 	bcm_tlv_t *elt;
 	int totlen;
 
-	elt = (bcm_tlv_t*)buf;
+	if ((elt = (bcm_tlv_t*)buf) == NULL) {
+		return NULL;
+	}
 	totlen = buflen;
 
 	/* find tagged parameter */
@@ -1533,6 +1525,7 @@ bcm_format_flags(const bcm_bit_desc_t *bd, uint32 flags, char* buf, int len)
 
 	return (int)(p - buf);
 }
+#endif 
 
 /* print bytes formatted as hex to a string. return the resulting string length */
 int
@@ -1548,7 +1541,6 @@ bcm_format_hex(char *str, const void *bytes, int len)
 	}
 	return (int)(p - str);
 }
-#endif
 
 /* pretty hex print a contiguous buffer */
 void
@@ -1595,10 +1587,17 @@ static const char *crypto_algo_names[] = {
 	"AES_CCM",
 	"AES_OCB_MSDU",
 	"AES_OCB_MPDU",
+#ifdef BCMCCX
+	"CKIP",
+	"CKIP_MMH",
+	"WEP_MMH",
+	"NALG",
+#else
 	"NALG",
 	"UNDEF",
 	"UNDEF",
 	"UNDEF",
+#endif /* BCMCCX */
 	"WAPI",
 	"PMK",
 	"BIP",
@@ -1972,7 +1971,7 @@ bcm_format_ssid(char* buf, const uchar ssid[], uint ssid_len)
 
 	return (int)(p - buf);
 }
-#endif
+#endif 
 
 #endif /* BCMDRIVER */
 
@@ -2214,7 +2213,11 @@ bcm_ip_cksum(uint8 *buf, uint32 len, uint32 sum)
  * with savings in not having to use an indirect access, had it been dynamically
  * allocated.
  */
+#ifdef DHD_PKTID_AUDIT_ENABLED
+#define BCM_MWBMAP_ITEMS_MAX    (16 * 1024)  /* May increase to 16K */
+#else
 #define BCM_MWBMAP_ITEMS_MAX    (4 * 1024)  /* May increase to 16K */
+#endif /* DHD_PKTID_AUDIT_ENABLED */
 
 #define BCM_MWBMAP_BITS_WORD    (NBITS(uint32))
 #define BCM_MWBMAP_WORDS_MAX    (BCM_MWBMAP_ITEMS_MAX / BCM_MWBMAP_BITS_WORD)
@@ -2781,7 +2784,6 @@ id16_map_clear(void * id16_map_hndl, uint16 total_ids, uint16 start_val16)
 #endif /* BCM_DBG && BCM_DBG_ID16 */
 }
 
-
 uint16 BCMFASTPATH /* Allocate a unique 16bit id */
 id16_map_alloc(void * id16_map_hndl)
 {
@@ -2838,6 +2840,9 @@ id16_map_free(void * id16_map_hndl, uint16 val16)
 		id16_map_dbg->avail[val16 - id16_map->start] = TRUE;
 	}
 #endif /* BCM_DBG && BCM_DBG_ID16 */
+
+	if (id16_map->stack_idx >= id16_map->total)
+		return;
 
 	id16_map->stack_idx++;
 	id16_map->stack[id16_map->stack_idx] = val16;
