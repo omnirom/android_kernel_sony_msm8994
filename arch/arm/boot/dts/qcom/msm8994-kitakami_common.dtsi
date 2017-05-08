@@ -1095,6 +1095,43 @@
 			qcom,s3-src = "kpdpwr-and-resin";
 		};
 	};
+
+	qcom,pmi8994@3 {
+		qcom,leds@d000 {
+			qcom,rgb_0 {
+				qcom,start-idx = <1>;
+				qcom,ramp-step-ms = <120>;
+				qcom,duty-pcts = [00 00 00 00 00
+						00 00 00 00 00
+						50 00 00 00 00
+						00 00 00 00 00
+						00];
+				qcom,use-blink;
+			};
+
+			qcom,rgb_1 {
+				qcom,start-idx = <1>;
+				qcom,ramp-step-ms = <120>;
+				qcom,duty-pcts = [00 00 00 00 00
+						00 00 00 00 00
+						50 00 00 00 00
+						00 00 00 00 00
+						00];
+				qcom,use-blink;
+			};
+
+			qcom,rgb_2 {
+				qcom,start-idx = <1>;
+				qcom,ramp-step-ms = <120>;
+				qcom,duty-pcts = [00 00 00 00 00
+						00 00 00 00 00
+						50 00 00 00 00
+						00 00 00 00 00
+						00];
+				qcom,use-blink;
+			};
+		};
+	};
 };
 
 &spmi_bus {
